@@ -1,0 +1,16 @@
+{
+  "appId": "com.cristhofer.discord-clone",
+  "files": ["dist-electron", "dist-react"],
+  "icon": "./public/logo512.png",
+  "mac": {
+    "target": "dmg"
+  },
+  "linux": {
+    "target": "AppImage",
+    "category": "Comunication"
+  },
+  "win": {
+    "target": ["portable", "msi"]
+  },
+  "publish": ["github"]
+}

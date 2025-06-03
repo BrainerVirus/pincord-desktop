@@ -1,0 +1,35 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/changelog",
+      {
+        "changelogFile": "CHANGELOG.md"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["package.json", "CHANGELOG.md"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\\n\\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "windows-build/*.exe", "label": "Windows Portable Installer" },
+          { "path": "windows-build/*.msi", "label": "Windows MSI Installer" },
+          { "path": "windows-build/latest.yml", "label": "Windows Latest Info" },
+          { "path": "mac-build/*.dmg", "label": "macOS Intel/ARM Installer" },
+          { "path": "mac-build/*.dmg.blockmap", "label": "macOS Intel/ARM Blockmap" },
+          { "path": "mac-build/latest-mac.yml", "label": "macOS Latest Info" },
+          { "path": "linux-build/*.AppImage", "label": "Linux AppImage" },
+          { "path": "linux-build/latest-linux.yml", "label": "Linux Latest Info" }
+        ]
+      }
+    ]
+  ]
+}

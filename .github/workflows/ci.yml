@@ -1,0 +1,63 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run ESLint
+        run: npm run lint
+      - name: Check formatting
+        run: npx prettier --check .
+
+  test_and_coverage:
+    name: Run Tests and Generate Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run unit/integration tests
+        # This will now output the HTML report to `report/` due to vite.config.js changes
+        run: npm test
+
+      - name: Generate code coverage report
+        # This will output the HTML report to `coverage/`
+        run: npm run coverage
+
+      - name: Upload Vitest HTML Test Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vitest-html-report
+          path: report/ # Path where the test HTML report is generated
+          retention-days: 30
+
+      - name: Upload Vitest HTML Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vitest-coverage-report
+          path: coverage/ # Path where the coverage HTML report is generated
+          retention-days: 30

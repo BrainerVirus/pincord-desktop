@@ -1,0 +1,124 @@
+{
+  "name": "electron-react-template",
+  "version": "1.0.0",
+  "description": "A template for building Electron applications with React, TypeScript, and Tailwind CSS",
+  "keywords": [
+    "electron",
+    "react",
+    "typescript",
+    "tailwindcss",
+    "vite",
+    "template"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Cristhofer Pincetti",
+    "url": "https://github.com/BrainerVirus"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BrainerVirus/electron-react-template.git"
+  },
+  "private": false,
+  "engines": {
+    "node": ">=22.14.0",
+    "npm": ">=10.9.2"
+  },
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "start-server-and-test dev:react http://localhost:5123 dev:electron",
+    "dev:react": "vite",
+    "dev:electron": "npm run transpile:electron && cross-env NODE_ENV=development electron .",
+    "build": "vite build && tsc",
+    "serve": "vite preview",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "format": "prettier",
+    "format:fix": "prettier --write .",
+    "check": "prettier --write . && eslint --fix",
+    "prepare": "husky",
+    "lint-staged": "lint-staged",
+    "commit": "cz",
+    "transpile:electron": "tsc --project src/electron/tsconfig.json",
+    "dist:mac": "npm run transpile:electron && npm run build && electron-builder --mac --arm64",
+    "dist:linux": "npm run transpile:electron && npm run build && electron-builder --linux --x64",
+    "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --x64",
+    "dist:all": "npm run transpile:electron && npm run build && electron-builder --mac --arm64 --linux --x64 --win --x64"
+  },
+  "dependencies": {
+    "@million/lint": "^1.0.14",
+    "@tailwindcss/vite": "^4.0.6",
+    "@tanstack/react-router": "^1.114.3",
+    "@tanstack/react-router-devtools": "^1.114.3",
+    "@tanstack/router-plugin": "^1.114.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "lucide-react": "^0.476.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "tailwindcss": "^4.0.6",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.2",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^3.1.4",
+    "@vitest/ui": "^3.1.4",
+    "commitizen": "^4.3.1",
+    "cross-env": "^7.0.3",
+    "cz-conventional-changelog": "^3.3.0",
+    "electron": "^36.1.0",
+    "electron-builder": "^26.0.12",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-import-resolver-typescript": "^4.3.4",
+    "eslint-plugin-import-x": "^4.11.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-prettier": "^5.4.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.1.0",
+    "husky": "^9.1.7",
+    "jsdom": "^26.0.0",
+    "lint-staged": "^16.0.0",
+    "npm-run-all": "^4.1.5",
+    "playwright": "^1.52.0",
+    "prettier": "^3.5.3",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "semantic-release": "^24.2.5",
+    "start-server-and-test": "^2.0.12",
+    "typescript": "^5.7.2",
+    "vite": "^6.1.0",
+    "vitest": "^3.1.4",
+    "web-vitals": "^4.2.4"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,html,css}": [
+      "prettier --write"
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  }
+}

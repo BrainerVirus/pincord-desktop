@@ -1,0 +1,3 @@
+* text=auto eol=lf
+*.{js,jsx,ts,tsx,json,md,html,css,yml,yaml} text eol=lf
+*.sh eol=lf

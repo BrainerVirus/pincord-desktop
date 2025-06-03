@@ -1,0 +1,85 @@
+name: 🐛 Bug Report
+description: Create a report to help us improve the template
+title: '[Bug]: '
+labels: ['bug', 'needs triage']
+assignees:
+  - BrainerVirus
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reliably reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: A clear and concise description of what actually happened.
+    validations:
+      required: true
+  - type: input
+    id: template-version
+    attributes:
+      label: Template Version (if applicable)
+      description: If this bug relates to a specific version of the template you used, please specify.
+      placeholder: e.g., v1.2.0 or commit SHA
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: What operating system are you experiencing the issue on?
+      multiple: true
+      options:
+        - Windows
+        - macOS
+        - Linux
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      placeholder: e.g., v22.14.0
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.md)
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

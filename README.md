@@ -1,12 +1,12 @@
-# Electron React Template
+# Pincord Desktop
 
-A modern, feature-rich template for building cross-platform desktop applications with Electron, React, TypeScript, and Tailwind CSS.
+A friendly, open-source Discord alternative! Join us from the very beginning! ✨
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## 📋 Overview
 
-This template provides a solid foundation for developing Electron applications with a modern React frontend. It comes pre-configured with TypeScript, Tailwind CSS, TanStack Router, and Shadcn UI components to help you build beautiful, type-safe desktop applications quickly.
+Pincord Desktop is a cross-platform desktop application built with Electron and React. It aims to provide a friendly, open-source alternative to Discord, allowing users to connect and communicate in a community-driven environment.
 
 ## ✨ Features
 
@@ -22,64 +22,19 @@ This template provides a solid foundation for developing Electron applications w
 - **Million.js** - Performance optimization for React
 - **Cross-platform** - Build for Windows, macOS, and Linux
 
-## 🔄 Using This Template
+## 🚀 Getting Started
 
-This repository is designed to be used as a template for building Electron applications with React. There are two ways to use it:
-
-### Option 1: GitHub Template (Recommended)
-
-1. Click the "Use this template" button at the top of the repository
-2. Select "Create a new repository"
-3. Choose the owner and name for your new repository
-4. Click "Create repository from template"
-5. Clone your new repository:
+1. Clone the repository:
 
    ```bash
-   git clone https://github.com/YOUR-USERNAME/YOUR-REPO-NAME.git
-   cd YOUR-REPO-NAME
+   git clone https://github.com/BrainerVirus/pincord-desktop.git
+   cd pincord-desktop
    ```
 
-6. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
-
-**Benefits:** Creates a fresh repository without commit history, ready for your project.
-
-### Option 2: Clone and Customize
-
-```bash
-# Clone the repository
-git clone https://github.com/BrainerVirus/electron-react-template.git my-app
-
-# Enter project directory
-cd my-app
-
-# Reset Git history
-rm -rf .git
-git init
-git add .
-git commit -m "Initial commit from template"
-
-# Install dependencies
-npm install
-```
-
-### Required Post-Template Setup
-
-After creating your project using either method above, you'll need to:
-
-1.  **Update package.json**:
-
-    - Change the `name`, `description`, and `version` (e.g., to `0.1.0` or `1.0.0`).
-    - Update the `author` object with your details.
-    - Update the `repository.url` to point to your new repository.
-    - Adjust any dependencies in `dependencies` and `devDependencies` as needed for your project.
-
-2.  **Configure GitHub Actions**:
-    - Keep or modify release.yml based on your needs:
-      - For a template/library: Use the simpler template release workflow
-      - For an application: Use the full Electron build workflow (see below)
 
 ## 📜 Available Scripts
 

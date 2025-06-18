@@ -1,26 +1,25 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { Check, Copy, Mic, MicOff, Monitor, Phone, PhoneOff, Video, VideoOff } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { AlertCircle, Check, CheckCircle, Copy, Mic, MicOff, Monitor, Phone, PhoneOff, Settings, Video, VideoOff } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const Route = createFileRoute('/')({
 	component: App,
 });
 
-// Simplified server configuration - fewer servers for faster discovery
+// Enhanced server configuration with multiple TURN servers for better reliability
 const servers = {
 	iceServers: [
-		// Just one good STUN server
 		{
-			urls: 'stun:stun.l.google.com:19302',
-		},
-		// One TURN server for NAT traversal if needed
-		{
-			urls: 'turn:openrelay.metered.ca:80',
-			username: 'openrelayproject',
-			credential: 'openrelayproject',
+			urls: [
+				'stun:stun.l.google.com:19302',
+				'stun:stun1.l.google.com:19302',
+				'stun:stun2.l.google.com:19302',
+				'stun:stun3.l.google.com:19302',
+				'stun:stun4.l.google.com:19302',
+			],
 		},
 	],
-	iceCandidatePoolSize: 5, // Reduced from 10
+	iceCandidatePoolSize: 5,
 };
 
 type MediaState = {
@@ -30,6 +29,14 @@ type MediaState = {
 };
 
 type Role = 'none' | 'caller' | 'callee';
+
+type PermissionStatus = 'unknown' | 'granted' | 'denied' | 'prompt';
+
+type DeviceInfo = {
+	deviceId: string;
+	label: string;
+	kind: MediaDeviceKind;
+};
 
 export default function App() {
 	// Refs
@@ -51,6 +58,136 @@ export default function App() {
 		screen: false,
 	});
 
+	// Permissions and devices
+	const [permissions, setPermissions] = useState<{
+		camera: PermissionStatus;
+		microphone: PermissionStatus;
+	}>({
+		camera: 'unknown',
+		microphone: 'unknown',
+	});
+
+	const [devices, setDevices] = useState<{
+		audioInputs: DeviceInfo[];
+		videoInputs: DeviceInfo[];
+		audioOutputs: DeviceInfo[];
+	}>({
+		audioInputs: [],
+		videoInputs: [],
+		audioOutputs: [],
+	});
+
+	const [selectedDevices, setSelectedDevices] = useState<{
+		audioInput: string;
+		videoInput: string;
+		audioOutput: string;
+	}>({
+		audioInput: '',
+		videoInput: '',
+		audioOutput: '',
+	});
+
+	const [showDeviceSettings, setShowDeviceSettings] = useState(false);
+
+	// Check permissions on component mount
+	useEffect(() => {
+		checkPermissions();
+		enumerateDevices();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	const checkPermissions = async () => {
+		try {
+			// Check camera permission
+			const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+			// Check microphone permission
+			const micPermission = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+
+			setPermissions({
+				camera: cameraPermission.state as PermissionStatus,
+				microphone: micPermission.state as PermissionStatus,
+			});
+
+			// Listen for permission changes
+			cameraPermission.onchange = () => {
+				setPermissions((prev) => ({ ...prev, camera: cameraPermission.state as PermissionStatus }));
+			};
+
+			micPermission.onchange = () => {
+				setPermissions((prev) => ({ ...prev, microphone: micPermission.state as PermissionStatus }));
+			};
+		} catch (error) {
+			console.warn('Permission API not supported:', error);
+		}
+	};
+
+	const requestPermissions = async () => {
+		try {
+			// Request both camera and microphone permissions
+			const stream = await navigator.mediaDevices.getUserMedia({
+				video: true,
+				audio: true,
+			});
+
+			// Stop the stream immediately, we just wanted permissions
+			stream.getTracks().forEach((track) => track.stop());
+
+			// Update permissions and enumerate devices
+			await checkPermissions();
+			await enumerateDevices();
+
+			alert('Permissions granted! You can now use camera and microphone.');
+		} catch (error) {
+			console.error('Permission denied:', error);
+			alert('Please allow camera and microphone access in your browser settings.');
+		}
+	};
+
+	const enumerateDevices = async () => {
+		try {
+			const deviceList = await navigator.mediaDevices.enumerateDevices();
+
+			const audioInputs: DeviceInfo[] = [];
+			const videoInputs: DeviceInfo[] = [];
+			const audioOutputs: DeviceInfo[] = [];
+
+			deviceList.forEach((device) => {
+				const deviceInfo: DeviceInfo = {
+					deviceId: device.deviceId,
+					label: device.label || `${device.kind} ${device.deviceId.substring(0, 8)}`,
+					kind: device.kind,
+				};
+
+				switch (device.kind) {
+					case 'audioinput':
+						audioInputs.push(deviceInfo);
+						break;
+					case 'videoinput':
+						videoInputs.push(deviceInfo);
+						break;
+					case 'audiooutput':
+						audioOutputs.push(deviceInfo);
+						break;
+				}
+			});
+
+			setDevices({ audioInputs, videoInputs, audioOutputs });
+
+			// Set default devices if not already set
+			if (!selectedDevices.audioInput && audioInputs.length > 0) {
+				setSelectedDevices((prev) => ({ ...prev, audioInput: audioInputs[0].deviceId }));
+			}
+			if (!selectedDevices.videoInput && videoInputs.length > 0) {
+				setSelectedDevices((prev) => ({ ...prev, videoInput: videoInputs[0].deviceId }));
+			}
+			if (!selectedDevices.audioOutput && audioOutputs.length > 0) {
+				setSelectedDevices((prev) => ({ ...prev, audioOutput: audioOutputs[0].deviceId }));
+			}
+		} catch (error) {
+			console.error('Error enumerating devices:', error);
+		}
+	};
+
 	const setupPeerConnection = useCallback(() => {
 		if (pc.current) {
 			pc.current.close();
@@ -58,24 +195,31 @@ export default function App() {
 
 		pc.current = new RTCPeerConnection(servers);
 
-		// Connection state monitoring
+		// Enhanced connection monitoring
 		pc.current.onconnectionstatechange = () => {
 			if (pc.current) {
 				const state = pc.current.connectionState;
 				setConnectionState(state);
 				setIsConnected(state === 'connected');
 				console.log(`[${role}] Connection state:`, state);
+
+				if (state === 'failed') {
+					console.error('Connection failed - trying to restart ICE');
+					pc.current?.restartIce();
+				}
 			}
 		};
 
-		// ICE connection state monitoring
 		pc.current.oniceconnectionstatechange = () => {
 			if (pc.current) {
 				console.log(`[${role}] ICE connection state:`, pc.current.iceConnectionState);
+
+				if (pc.current.iceConnectionState === 'failed') {
+					console.error('ICE connection failed');
+				}
 			}
 		};
 
-		// Remote track handling
 		pc.current.ontrack = (event) => {
 			console.log(`[${role}] Received remote track:`, event.track.kind);
 			if (remoteVideoRef.current && event.streams[0]) {
@@ -83,13 +227,11 @@ export default function App() {
 			}
 		};
 
-		// ICE candidate handling
 		pc.current.onicecandidate = (event) => {
 			if (event.candidate) {
-				console.log(`[${role}] ICE Candidate:`, event.candidate.type);
+				console.log(`[${role}] ICE Candidate:`, event.candidate.type, event.candidate.address);
 			} else {
 				console.log(`[${role}] ICE gathering complete`);
-				// Update SDP when ICE gathering is complete
 				if (pc.current?.localDescription?.type === 'offer') {
 					setOfferSdp(JSON.stringify(pc.current.localDescription, null, 2));
 				} else if (pc.current?.localDescription?.type === 'answer') {
@@ -98,9 +240,8 @@ export default function App() {
 			}
 		};
 
-		// Add negotiation needed handler
 		pc.current.onnegotiationneeded = async () => {
-			if (role === 'caller') {
+			if (role === 'caller' && pc.current?.signalingState === 'stable') {
 				console.log(`[${role}] Negotiation needed - creating offer`);
 				try {
 					const offer = await pc.current!.createOffer();
@@ -112,22 +253,59 @@ export default function App() {
 		};
 	}, [role]);
 
-	const getMediaStream = useCallback(async (constraints: MediaStreamConstraints) => {
-		try {
-			return await navigator.mediaDevices.getUserMedia(constraints);
-		} catch (error) {
-			console.error('Error accessing media:', error);
-			alert('Please allow camera/microphone access to continue.');
-			throw error;
-		}
-	}, []);
+	const getMediaStream = useCallback(
+		async (constraints: MediaStreamConstraints) => {
+			try {
+				// Apply device constraints if devices are selected
+				if (typeof constraints.audio === 'object' || constraints.audio === true) {
+					constraints.audio = {
+						deviceId: selectedDevices.audioInput ? { exact: selectedDevices.audioInput } : undefined,
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true,
+					};
+				}
+
+				if (typeof constraints.video === 'object' || constraints.video === true) {
+					constraints.video = {
+						deviceId: selectedDevices.videoInput ? { exact: selectedDevices.videoInput } : undefined,
+						width: { ideal: 1280 },
+						height: { ideal: 720 },
+						frameRate: { ideal: 30 },
+					};
+				}
+
+				console.log('Requesting media with constraints:', constraints);
+				const stream = await navigator.mediaDevices.getUserMedia(constraints);
+				console.log(
+					'Media stream obtained:',
+					stream.getTracks().map((t) => `${t.kind}: ${t.label}`),
+				);
+				return stream;
+			} catch (error) {
+				console.error('Error accessing media:', error);
+				throw error;
+			}
+		},
+		[selectedDevices.audioInput, selectedDevices.videoInput],
+	);
 
 	const getScreenStream = useCallback(async () => {
 		try {
-			return await navigator.mediaDevices.getDisplayMedia({
-				video: true,
-				audio: true,
+			console.log('Requesting screen share...');
+			const stream = await navigator.mediaDevices.getDisplayMedia({
+				video: {
+					width: { ideal: 1920 },
+					height: { ideal: 1080 },
+					frameRate: { ideal: 30 },
+				},
+				audio: true, // Include system audio
 			});
+			console.log(
+				'Screen stream obtained:',
+				stream.getTracks().map((t) => `${t.kind}: ${t.label}`),
+			);
+			return stream;
 		} catch (error) {
 			console.error('Error accessing screen:', error);
 			throw error;
@@ -137,7 +315,10 @@ export default function App() {
 	const updateMediaStream = useCallback(async () => {
 		try {
 			// Stop existing tracks
-			localStreamRef.current?.getTracks().forEach((track) => track.stop());
+			localStreamRef.current?.getTracks().forEach((track) => {
+				console.log('Stopping track:', track.kind, track.label);
+				track.stop();
+			});
 
 			let newStream: MediaStream;
 
@@ -145,15 +326,15 @@ export default function App() {
 				// Screen sharing
 				newStream = await getScreenStream();
 
-				// Add audio if enabled
-				if (mediaState.audio) {
+				// Add microphone audio if enabled and not already included
+				if (mediaState.audio && newStream.getAudioTracks().length === 0) {
 					try {
 						const audioStream = await getMediaStream({ audio: true, video: false });
 						audioStream.getAudioTracks().forEach((track) => {
 							newStream.addTrack(track);
 						});
 					} catch (error) {
-						console.warn('Could not add audio to screen share:', error);
+						console.warn('Could not add microphone to screen share:', error);
 					}
 				}
 			} else {
@@ -177,6 +358,17 @@ export default function App() {
 				localVideoRef.current.srcObject = newStream;
 			}
 
+			// Set audio output device if supported
+			if (selectedDevices.audioOutput && 'setSinkId' in HTMLVideoElement.prototype) {
+				try {
+					await (remoteVideoRef.current as HTMLVideoElement & { setSinkId: (deviceId: string) => Promise<void> })?.setSinkId(
+						selectedDevices.audioOutput,
+					);
+				} catch (error) {
+					console.warn('Could not set audio output device:', error);
+				}
+			}
+
 			// Replace tracks in peer connection if it exists
 			if (pc.current) {
 				const senders = pc.current.getSenders();
@@ -185,8 +377,10 @@ export default function App() {
 				const videoTrack = newStream.getVideoTracks()[0] || null;
 				const videoSender = senders.find((s) => s.track?.kind === 'video');
 				if (videoSender) {
+					console.log('Replacing video track');
 					await videoSender.replaceTrack(videoTrack);
 				} else if (videoTrack) {
+					console.log('Adding video track');
 					pc.current.addTrack(videoTrack, newStream);
 				}
 
@@ -194,17 +388,30 @@ export default function App() {
 				const audioTrack = newStream.getAudioTracks()[0] || null;
 				const audioSender = senders.find((s) => s.track?.kind === 'audio');
 				if (audioSender) {
+					console.log('Replacing audio track');
 					await audioSender.replaceTrack(audioTrack);
 				} else if (audioTrack) {
+					console.log('Adding audio track');
 					pc.current.addTrack(audioTrack, newStream);
 				}
 			}
 		} catch (error) {
 			console.error('Error updating media stream:', error);
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+			alert(`Error accessing media: ${errorMessage}. Please check permissions and try again.`);
 		}
-	}, [mediaState, getMediaStream, getScreenStream]);
+	}, [mediaState, getMediaStream, getScreenStream, selectedDevices.audioOutput]);
 
 	const handleStartAsCaller = async () => {
+		if (permissions.microphone !== 'granted' || permissions.camera !== 'granted') {
+			const proceed = confirm('Camera and microphone permissions are required. Grant permissions now?');
+			if (proceed) {
+				await requestPermissions();
+			} else {
+				return;
+			}
+		}
+
 		setRole('caller');
 		setupPeerConnection();
 		await updateMediaStream();
@@ -223,10 +430,19 @@ export default function App() {
 					console.error('Error creating initial offer:', error);
 				}
 			}
-		}, 100);
+		}, 1000);
 	};
 
 	const handleStartAsCallee = async () => {
+		if (permissions.microphone !== 'granted' || permissions.camera !== 'granted') {
+			const proceed = confirm('Camera and microphone permissions are required. Grant permissions now?');
+			if (proceed) {
+				await requestPermissions();
+			} else {
+				return;
+			}
+		}
+
 		setRole('callee');
 		setupPeerConnection();
 		await updateMediaStream();
@@ -344,30 +560,133 @@ export default function App() {
 		}
 	};
 
+	const getPermissionIcon = (status: PermissionStatus) => {
+		switch (status) {
+			case 'granted':
+				return <CheckCircle size={16} className="text-green-600" />;
+			case 'denied':
+				return <AlertCircle size={16} className="text-red-600" />;
+			default:
+				return <AlertCircle size={16} className="text-yellow-600" />;
+		}
+	};
+
 	return (
 		<div className="flex min-h-screen flex-col items-center bg-gray-100 p-4">
 			<header className="w-full max-w-6xl text-center">
-				<h1 className="mb-2 text-3xl font-bold">WebRTC Local Test</h1>
-				<p className="mb-2 text-gray-600">Open two tabs to test P2P connection locally</p>
+				<h1 className="mb-2 text-3xl font-bold">Enhanced WebRTC Test</h1>
+				<p className="mb-2 text-gray-600">Full-featured WebRTC with device selection and permissions</p>
 				<div className="flex items-center justify-center gap-4 text-sm">
 					<span className={`font-medium ${getConnectionStatusColor()}`}>Status: {connectionState.toUpperCase()}</span>
 					<span className="font-medium text-blue-600">Role: {role.toUpperCase()}</span>
 				</div>
 			</header>
 
+			{/* Permissions Status */}
+			<div className="mb-4 w-full max-w-6xl rounded-lg bg-white p-4 shadow-md">
+				<h3 className="mb-2 font-semibold">Permissions Status</h3>
+				<div className="flex items-center justify-between">
+					<div className="flex gap-4">
+						<div className="flex items-center gap-2">
+							{getPermissionIcon(permissions.microphone)}
+							<span>Microphone: {permissions.microphone}</span>
+						</div>
+						<div className="flex items-center gap-2">
+							{getPermissionIcon(permissions.camera)}
+							<span>Camera: {permissions.camera}</span>
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<button onClick={requestPermissions} className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600">
+							Request Permissions
+						</button>
+						<button
+							onClick={() => setShowDeviceSettings(!showDeviceSettings)}
+							className="flex items-center gap-1 rounded bg-gray-500 px-3 py-1 text-sm text-white hover:bg-gray-600"
+						>
+							<Settings size={16} />
+							Devices
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{/* Device Settings */}
+			{showDeviceSettings && (
+				<div className="mb-4 w-full max-w-6xl rounded-lg bg-white p-4 shadow-md">
+					<h3 className="mb-4 font-semibold">Device Settings</h3>
+					<div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+						<div>
+							<label htmlFor="audioInput" className="mb-1 block text-sm font-medium">
+								Microphone
+							</label>
+							<select
+								id="audioInput"
+								value={selectedDevices.audioInput}
+								onChange={(e) => setSelectedDevices((prev) => ({ ...prev, audioInput: e.target.value }))}
+								className="w-full rounded border p-2 text-sm"
+							>
+								{devices.audioInputs.map((device) => (
+									<option key={device.deviceId} value={device.deviceId}>
+										{device.label}
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div>
+							<label htmlFor="videoInput" className="mb-1 block text-sm font-medium">
+								Camera
+							</label>
+							<select
+								id="videoInput"
+								value={selectedDevices.videoInput}
+								onChange={(e) => setSelectedDevices((prev) => ({ ...prev, videoInput: e.target.value }))}
+								className="w-full rounded border p-2 text-sm"
+							>
+								{devices.videoInputs.map((device) => (
+									<option key={device.deviceId} value={device.deviceId}>
+										{device.label}
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div>
+							<label htmlFor="audioOutput" className="mb-1 block text-sm font-medium">
+								Speakers
+							</label>
+							<select
+								id="audioOutput"
+								value={selectedDevices.audioOutput}
+								onChange={(e) => setSelectedDevices((prev) => ({ ...prev, audioOutput: e.target.value }))}
+								className="w-full rounded border p-2 text-sm"
+							>
+								{devices.audioOutputs.map((device) => (
+									<option key={device.deviceId} value={device.deviceId}>
+										{device.label}
+									</option>
+								))}
+							</select>
+						</div>
+					</div>
+					<button onClick={enumerateDevices} className="mt-2 rounded bg-green-500 px-3 py-1 text-sm text-white hover:bg-green-600">
+						Refresh Devices
+					</button>
+				</div>
+			)}
+
 			{/* Instructions */}
 			{role === 'none' && (
 				<div className="mb-6 w-full max-w-4xl rounded-lg bg-blue-50 p-4">
-					<h3 className="mb-2 font-semibold text-blue-800">How to test locally:</h3>
+					<h3 className="mb-2 font-semibold text-blue-800">Testing Instructions:</h3>
 					<ol className="list-inside list-decimal space-y-1 text-blue-700">
-						<li>Open two browser tabs with this page</li>
-						<li>In Tab 1: Click &quot;Start as Caller&quot;</li>
-						<li>In Tab 2: Click &quot;Start as Callee&quot;</li>
-						<li>Copy the offer from Tab 1 to Tab 2</li>
-						<li>In Tab 2: Click &quot;Create Answer&quot;</li>
-						<li>Copy the answer from Tab 2 to Tab 1</li>
-						<li>In Tab 1: Click &quot;Add Answer&quot;</li>
-						<li>Connection should establish!</li>
+						<li>Make sure permissions are granted (green checkmarks above)</li>
+						<li>Configure your preferred devices in settings</li>
+						<li>Open two instances (tabs/windows/separate computers)</li>
+						<li>One person: &quot;Start as Caller&quot;, other: &quot;Start as Callee&quot;</li>
+						<li>Copy/paste the SDP offers and answers</li>
+						<li>Connection should establish with audio/video!</li>
 					</ol>
 				</div>
 			)}
@@ -377,12 +696,12 @@ export default function App() {
 				<div className="mb-4 flex w-full max-w-6xl justify-center gap-4">
 					<button className="flex items-center gap-2 rounded bg-blue-500 px-6 py-3 text-white hover:bg-blue-600" onClick={handleStartAsCaller}>
 						<Phone size={20} />
-						Start as Caller (Tab 1)
+						Start as Caller
 					</button>
 
 					<button className="flex items-center gap-2 rounded bg-green-500 px-6 py-3 text-white hover:bg-green-600" onClick={handleStartAsCallee}>
 						<Phone size={20} />
-						Start as Callee (Tab 2)
+						Start as Callee
 					</button>
 				</div>
 			) : (
@@ -454,11 +773,11 @@ export default function App() {
 						</div>
 					</div>
 
-					{/* SDP Exchange - Simplified based on role */}
+					{/* SDP Exchange - Same as before but with better styling */}
 					{role === 'caller' && (
 						<div className="w-full max-w-4xl space-y-4">
 							<div className="rounded-lg bg-blue-50 p-4">
-								<h3 className="mb-2 font-semibold text-blue-800">Step 1: Copy this offer to the other tab (callee)</h3>
+								<h3 className="mb-2 font-semibold text-blue-800">Step 1: Copy this offer to the other peer</h3>
 								<div className="relative">
 									<textarea
 										className="h-32 w-full rounded border p-2 font-mono text-xs"
@@ -484,10 +803,10 @@ export default function App() {
 									className="mb-2 h-32 w-full rounded border p-2 font-mono text-xs"
 									value={answerSdp}
 									onChange={(e) => setAnswerSdp(e.target.value)}
-									placeholder="Paste the answer from the callee tab here..."
+									placeholder="Paste the answer from the callee here..."
 								/>
 								<button
-									className="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+									className="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600 disabled:bg-gray-400"
 									onClick={handleAddAnswer}
 									disabled={!answerSdp.trim()}
 								>
@@ -505,10 +824,10 @@ export default function App() {
 									className="mb-2 h-32 w-full rounded border p-2 font-mono text-xs"
 									value={offerSdp}
 									onChange={(e) => setOfferSdp(e.target.value)}
-									placeholder="Paste the offer from the caller tab here..."
+									placeholder="Paste the offer from the caller here..."
 								/>
 								<button
-									className="rounded bg-orange-500 px-4 py-2 text-white hover:bg-orange-600"
+									className="rounded bg-orange-500 px-4 py-2 text-white hover:bg-orange-600 disabled:bg-gray-400"
 									onClick={handleCreateAnswer}
 									disabled={!offerSdp.trim()}
 								>
@@ -539,6 +858,20 @@ export default function App() {
 						</div>
 					)}
 				</>
+			)}
+
+			{/* Debug Info */}
+			{connectionState === 'failed' && (
+				<div className="mt-4 w-full max-w-4xl rounded-lg bg-red-50 p-4">
+					<h3 className="mb-2 font-semibold text-red-800">Connection Failed - Troubleshooting:</h3>
+					<ul className="list-inside list-disc space-y-1 text-sm text-red-700">
+						<li>Both peers might be behind strict NATs/firewalls</li>
+						<li>Try using a different network (mobile hotspot)</li>
+						<li>Check if both devices have internet connectivity</li>
+						<li>TURN servers might be overloaded - try refreshing and reconnecting</li>
+						<li>For production, use your own TURN servers</li>
+					</ul>
+				</div>
 			)}
 		</div>
 	);

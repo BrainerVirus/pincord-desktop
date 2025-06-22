@@ -11,9 +11,16 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root';
+import { Route as CallingImport } from './routes/calling';
 import { Route as IndexImport } from './routes/index';
 
 // Create/Update Routes
+
+const CallingRoute = CallingImport.update({
+	id: '/calling',
+	path: '/calling',
+	getParentRoute: () => rootRoute,
+} as any);
 
 const IndexRoute = IndexImport.update({
 	id: '/',
@@ -32,6 +39,13 @@ declare module '@tanstack/react-router' {
 			preLoaderRoute: typeof IndexImport;
 			parentRoute: typeof rootRoute;
 		};
+		'/calling': {
+			id: '/calling';
+			path: '/calling';
+			fullPath: '/calling';
+			preLoaderRoute: typeof CallingImport;
+			parentRoute: typeof rootRoute;
+		};
 	}
 }
 
@@ -39,32 +53,37 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
 	'/': typeof IndexRoute;
+	'/calling': typeof CallingRoute;
 }
 
 export interface FileRoutesByTo {
 	'/': typeof IndexRoute;
+	'/calling': typeof CallingRoute;
 }
 
 export interface FileRoutesById {
 	__root__: typeof rootRoute;
 	'/': typeof IndexRoute;
+	'/calling': typeof CallingRoute;
 }
 
 export interface FileRouteTypes {
 	fileRoutesByFullPath: FileRoutesByFullPath;
-	fullPaths: '/';
+	fullPaths: '/' | '/calling';
 	fileRoutesByTo: FileRoutesByTo;
-	to: '/';
-	id: '__root__' | '/';
+	to: '/' | '/calling';
+	id: '__root__' | '/' | '/calling';
 	fileRoutesById: FileRoutesById;
 }
 
 export interface RootRouteChildren {
 	IndexRoute: typeof IndexRoute;
+	CallingRoute: typeof CallingRoute;
 }
 
 const rootRouteChildren: RootRouteChildren = {
 	IndexRoute: IndexRoute,
+	CallingRoute: CallingRoute,
 };
 
 export const routeTree = rootRoute._addFileChildren(rootRouteChildren)._addFileTypes<FileRouteTypes>();
@@ -75,11 +94,15 @@ export const routeTree = rootRoute._addFileChildren(rootRouteChildren)._addFileT
     "__root__": {
       "filePath": "__root.tsx",
       "children": [
-        "/"
+        "/",
+        "/calling"
       ]
     },
     "/": {
       "filePath": "index.tsx"
+    },
+    "/calling": {
+      "filePath": "calling.tsx"
     }
   }
 }

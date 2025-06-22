@@ -1,13 +1,43 @@
+import {
+	NavigationMenu,
+	NavigationMenuContent,
+	NavigationMenuItem,
+	NavigationMenuLink,
+	NavigationMenuList,
+	NavigationMenuTrigger,
+	navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu';
 import { Link } from '@tanstack/react-router';
 
 export default function Header() {
 	return (
-		<header className="flex justify-between gap-2 bg-white p-2 text-black">
-			<nav className="flex flex-row">
-				<div className="px-2 font-bold">
-					<Link to="/">Home</Link>
-				</div>
-			</nav>
-		</header>
+		<NavigationMenu className="px-4 py-2" viewport={false}>
+			<NavigationMenuList>
+				<NavigationMenuItem>
+					<NavigationMenuLink className={navigationMenuTriggerStyle()}>
+						<Link to="/">Home</Link>
+					</NavigationMenuLink>
+				</NavigationMenuItem>
+				<NavigationMenuItem>
+					<NavigationMenuTrigger>List</NavigationMenuTrigger>
+					<NavigationMenuContent>
+						<ul className="grid gap-4">
+							<li>
+								<NavigationMenuLink asChild>
+									<Link className="text-nowrap" to="/calling" search={{ callRole: 'caller' }}>
+										As caller
+									</Link>
+								</NavigationMenuLink>
+								<NavigationMenuLink asChild>
+									<Link className="text-nowrap" to="/calling" search={{ callRole: 'callee' }}>
+										As callee
+									</Link>
+								</NavigationMenuLink>
+							</li>
+						</ul>
+					</NavigationMenuContent>
+				</NavigationMenuItem>
+			</NavigationMenuList>
+		</NavigationMenu>
 	);
 }
